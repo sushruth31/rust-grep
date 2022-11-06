@@ -55,27 +55,23 @@ impl Config {
             //get the metadata of of the first element in the queue
             let path = queue.iter().collect::<Vec<&String>>()[0].clone();
             let path_clone = path.clone();
-            let md = metadata(path)?;
             //remove the first element from the queue
-            queue.remove(&path_clone);
-            if md.is_dir() {
-                if let Ok(entries) = fs::read_dir(path_clone) {
-                    for entry in entries {
-                        if let Ok(entry) = entry {
-                            let path = entry.path().to_str().unwrap().to_string();
-                            queue.insert(path);
+            if let Ok(md) = metadata(path) {
+                queue.remove(&path_clone);
+                if md.is_dir() {
+                    if let Ok(entries) = fs::read_dir(path_clone) {
+                        for entry in entries {
+                            if let Ok(entry) = entry {
+                                let path = entry.path().to_str().unwrap().to_string();
+                                queue.insert(path);
+                            }
                         }
                     }
+                } else {
+                    files.push(path_clone);
                 }
             } else {
-                //check if the file is a text file
-                if let Some(ext) = path_clone.split('.').last() {
-                    if ext == "txt" {
-                        files.push(path_clone);
-                    } else {
-                        println!("{} is not a text file. Skipping it.", path_clone);
-                    }
-                }
+                println!("{} is not a valid path", path_clone);
             }
         }
     }
@@ -113,10 +109,12 @@ impl Config {
                                 println!("{}: {}", i + 1, line);
                             }
                         }
+                    } else {
+                        println!("Could not read file: {}", path);
                     }
                 }
                 Err(e) => {
-                    println!("Error: {}", e);
+                    println!("Error opening file: {}", e);
                 }
             }
         }
