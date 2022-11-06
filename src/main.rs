@@ -48,10 +48,6 @@ impl Config {
         let mut queue: HashSet<String> = HashSet::new();
         queue.insert(self.path.clone());
         loop {
-            if queue.is_empty() {
-                self.paths = files.to_vec();
-                return Ok(files);
-            }
             //get the metadata of of the first element in the queue
             let path = queue.iter().collect::<Vec<&String>>()[0].clone();
             let path_clone = path.clone();
@@ -72,6 +68,10 @@ impl Config {
                 }
             } else {
                 println!("{} is not a valid path", path_clone);
+            }
+            if queue.is_empty() {
+                self.paths = files.to_vec();
+                return Ok(files);
             }
         }
     }
@@ -102,12 +102,9 @@ impl Config {
                     let mut contents = String::new();
                     if reader.read_to_string(&mut contents).is_ok() {
                         let matches = self.get_matches(&contents);
-                        if matches.is_empty() {
-                        } else {
-                            for (line, i) in matches {
-                                match_count += 1;
-                                println!("{}: {}", i + 1, line);
-                            }
+                        for (line, i) in matches {
+                            match_count += 1;
+                            println!("{}: {}", i + 1, line);
                         }
                     } else {
                         println!("Could not read file: {}", path);
