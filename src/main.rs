@@ -15,23 +15,31 @@ impl Config {
         if args.len() < 3 {
             return Err("not enough arguments");
         }
-        let query = args[1].clone();
-        let path = args[2].clone();
-        let case_sensitive = if args.len() > 3 {
-            if args[3] == "-i" {
-                true
+
+        if args.len() > 4 {
+            Err("too many arguments")?
+        }
+
+        if let [_, query, path, ..] = args.as_slice() {
+            let case_sensitive = if args.len() == 4 {
+                if args[3] == "-I" || args[3] == "--ignore-case" || args[3] == "-i" {
+                    true
+                } else {
+                    Err("invalid third argument")?
+                }
             } else {
                 false
-            }
+            };
+
+            Ok(Config {
+                query: query.to_string(),
+                path: path.to_string(),
+                case_sensitive,
+                paths: Vec::new(),
+            })
         } else {
-            false
-        };
-        Ok(Config {
-            query,
-            path,
-            case_sensitive,
-            paths: Vec::new(),
-        })
+            Err("invalid arguments")
+        }
     }
 
     fn get_files_from_path(&mut self) -> Result<Vec<String>, Box<dyn Error>> {
@@ -50,13 +58,23 @@ impl Config {
             //remove the first element from the queue
             queue.remove(&path_clone);
             if md.is_dir() {
-                for entry in fs::read_dir(path_clone)? {
-                    let entry = entry?;
-                    let path = entry.path();
-                    queue.insert(path.to_str().unwrap().to_string());
+                if let Ok(entries) = fs::read_dir(path_clone) {
+                    for entry in entries {
+                        if let Ok(entry) = entry {
+                            let path = entry.path().to_str().unwrap().to_string();
+                            queue.insert(path);
+                        }
+                    }
                 }
             } else {
-                files.push(path_clone);
+                //check if the file is a text file
+                if let Some(ext) = path_clone.split('.').last() {
+                    if ext == "txt" {
+                        files.push(path_clone);
+                    } else {
+                        println!("{} is not a text file. Skipping it.", path_clone);
+                    }
+                }
             }
         }
     }
@@ -78,14 +96,21 @@ impl Config {
     }
 
     fn read_file_from_paths(&self) -> Result<(), Box<dyn Error>> {
+        let mut empty_count = 0;
         for path in &self.paths {
+            println!("Searching in file: {}...", path);
             let contents = fs::read_to_string(path)?;
             let matches = self.get_matches(&contents);
             if !matches.is_empty() {
                 for (line, i) in matches {
                     println!("File: {}, Line: {}, Content: {}", path, i, line);
                 }
+            } else {
+                empty_count += 1;
             }
+        }
+        if empty_count == self.paths.len() {
+            println!("No matches found");
         }
         Ok(())
     }
