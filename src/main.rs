@@ -10,7 +10,6 @@ struct Config {
     paths: Vec<String>,
 }
 
-//new function for Config struct
 impl Config {
     fn new<'a>(args: Vec<String>) -> Result<Config, &'a str> {
         if args.len() < 3 {
@@ -18,7 +17,7 @@ impl Config {
         }
         let query = args[1].clone();
         let path = args[2].clone();
-        let case_sensitive = if args.len() == 4 {
+        let case_sensitive = if args.len() > 3 {
             if args[3] == "-i" {
                 true
             } else {
@@ -49,7 +48,7 @@ impl Config {
             let path_clone = path.clone();
             let md = metadata(path)?;
             //remove the first element from the queue
-            queue = queue.iter().skip(1).cloned().collect();
+            queue.remove(&path_clone);
             if md.is_dir() {
                 for entry in fs::read_dir(path_clone)? {
                     let entry = entry?;
@@ -83,7 +82,6 @@ impl Config {
             let contents = fs::read_to_string(path)?;
             let matches = self.get_matches(&contents);
             if !matches.is_empty() {
-                println!("{}:", path);
                 for (line, i) in matches {
                     println!("File: {}, Line: {}, Content: {}", path, i, line);
                 }
@@ -99,13 +97,14 @@ fn main() {
         std::process::exit(1);
     });
     //get paths from path
-    config.get_files_from_path().unwrap_or_else(|err| {
+    let paths = config.get_files_from_path().unwrap_or_else(|err| {
         println!("Problem getting files from path: {}", err);
         std::process::exit(1);
     });
     //read files from paths
     config.read_file_from_paths().unwrap_or_else(|err| {
-        println!("Problem reading files from paths: {}", err);
+        let path_or_paths = if paths.len() > 1 { "paths" } else { "path" };
+        println!("Problem reading file from {}: {}", path_or_paths, err);
         std::process::exit(1);
     });
 }
