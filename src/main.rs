@@ -45,21 +45,20 @@ impl Config {
 
     fn get_files_from_path(&mut self) -> Result<Vec<String>, Box<dyn Error>> {
         let mut files: Vec<String> = Vec::new();
-        let mut queue: HashSet<String> = HashSet::new();
-        queue.insert(self.path.clone());
+        let mut queue: Vec<String> = Vec::new();
+        queue.push(self.path.clone());
         loop {
             //get the metadata of of the first element in the queue
             let path = queue.iter().collect::<Vec<&String>>()[0].clone();
             let path_clone = path.clone();
-            //remove the first element from the queue
             if let Ok(md) = metadata(path) {
-                queue.remove(&path_clone);
+                queue.remove(0);
                 if md.is_dir() {
                     if let Ok(entries) = fs::read_dir(path_clone) {
                         for entry in entries {
                             if let Ok(entry) = entry {
                                 let path = entry.path().to_str().unwrap().to_string();
-                                queue.insert(path);
+                                queue.push(path);
                             }
                         }
                     }
