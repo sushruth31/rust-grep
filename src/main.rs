@@ -43,9 +43,9 @@ impl Config {
         }
     }
 
-    fn get_files_from_path(&mut self) -> Result<Vec<String>, Box<dyn Error>> {
-        let mut files: Vec<String> = Vec::new();
+    fn get_files_from_path(&mut self) -> () {
         let mut queue: Vec<String> = Vec::new();
+        let mut match_count = 0;
         queue.push(self.path.clone());
         loop {
             //get the metadata of of the first element in the queue
@@ -63,16 +63,40 @@ impl Config {
                         }
                     }
                 } else {
-                    files.push(path_clone);
+                    match_count += self.process_file(&path_clone);
                 }
             } else {
                 println!("{} is not a valid path", path_clone);
             }
             if queue.is_empty() {
-                self.paths = files.to_vec();
-                return Ok(files);
+                println!("{} matches found", match_count);
+                return;
             }
         }
+    }
+
+    fn process_file(&self, path: &str) -> i32 {
+        println!("Now searching {}...", path);
+        let mut match_count = 0;
+        match File::open(path) {
+            Ok(file) => {
+                let mut reader = BufReader::new(file);
+                let mut contents = String::new();
+                if reader.read_to_string(&mut contents).is_ok() {
+                    let matches = self.get_matches(&contents);
+                    for (line, i) in matches {
+                        match_count += 1;
+                        println!("{}: {}", i + 1, line);
+                    }
+                } else {
+                    println!("could not read file {}", path);
+                }
+            }
+            Err(e) => {
+                println!("Error processing file {}: {}", path, e);
+            }
+        }
+        match_count
     }
 
     fn get_matches<'a>(&self, contents: &'a str) -> Vec<(&'a str, usize)> {
@@ -90,32 +114,6 @@ impl Config {
         }
         matches
     }
-
-    fn read_file_from_paths(&self) -> Result<i32, Box<dyn Error>> {
-        let mut match_count = 0;
-        for path in &self.paths {
-            println!("Searching in file: {}...", path);
-            match File::open(path) {
-                Ok(file) => {
-                    let mut reader = BufReader::new(file);
-                    let mut contents = String::new();
-                    if reader.read_to_string(&mut contents).is_ok() {
-                        let matches = self.get_matches(&contents);
-                        for (line, i) in matches {
-                            match_count += 1;
-                            println!("{}: {}", i + 1, line);
-                        }
-                    } else {
-                        println!("Could not read file: {}", path);
-                    }
-                }
-                Err(e) => {
-                    println!("Error opening file: {}", e);
-                }
-            }
-        }
-        Ok(match_count)
-    }
 }
 
 fn main() {
@@ -123,21 +121,5 @@ fn main() {
         println!("Problem parsing arguments: {}", err);
         std::process::exit(1);
     });
-    //get paths from path
-    let paths = config.get_files_from_path().unwrap_or_else(|err| {
-        println!("Problem getting files from path: {}", err);
-        std::process::exit(1);
-    });
-    //read files from paths
-    let matches = config.read_file_from_paths().unwrap_or_else(|err| {
-        let path_or_paths = if paths.len() > 1 { "paths" } else { "path" };
-        println!("Problem reading file from {}: {}", path_or_paths, err);
-        std::process::exit(1);
-    });
-    if matches == 0 {
-        println!("No matches found");
-    } else {
-        let match_or_matches = if matches > 1 { "matches" } else { "match" };
-        println!("Found {} {}", matches, match_or_matches);
-    }
+    config.get_files_from_path();
 }
