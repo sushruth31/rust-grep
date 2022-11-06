@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-use std::error::Error;
 use std::fs::metadata;
 use std::fs::{self, File};
 use std::io::{BufReader, Read};
@@ -8,7 +6,6 @@ struct Config {
     query: String,
     path: String,
     case_sensitive: bool,
-    paths: Vec<String>,
 }
 
 impl Config {
@@ -36,14 +33,13 @@ impl Config {
                 query: query.to_string(),
                 path: path.to_string(),
                 case_sensitive,
-                paths: Vec::new(),
             })
         } else {
             Err("invalid arguments")
         }
     }
 
-    fn get_files_from_path(&mut self) -> () {
+    fn get_files_from_path(&self) -> () {
         let mut queue: Vec<String> = Vec::new();
         let mut match_count = 0;
         queue.push(self.path.clone());
@@ -117,7 +113,7 @@ impl Config {
 }
 
 fn main() {
-    let mut config = Config::new(std::env::args().collect::<Vec<String>>()).unwrap_or_else(|err| {
+    let config = Config::new(std::env::args().collect::<Vec<String>>()).unwrap_or_else(|err| {
         println!("Problem parsing arguments: {}", err);
         std::process::exit(1);
     });
