@@ -92,8 +92,8 @@ impl Config {
         matches
     }
 
-    fn read_file_from_paths(&self) -> Result<(), Box<dyn Error>> {
-        let mut empty_count = 0;
+    fn read_file_from_paths(&self) -> Result<i32, Box<dyn Error>> {
+        let mut match_count = 0;
         for path in &self.paths {
             println!("Searching in file: {}...", path);
             match File::open(path) {
@@ -103,9 +103,9 @@ impl Config {
                     if reader.read_to_string(&mut contents).is_ok() {
                         let matches = self.get_matches(&contents);
                         if matches.is_empty() {
-                            empty_count += 1;
                         } else {
                             for (line, i) in matches {
+                                match_count += 1;
                                 println!("{}: {}", i + 1, line);
                             }
                         }
@@ -118,10 +118,7 @@ impl Config {
                 }
             }
         }
-        if empty_count == self.paths.len() {
-            println!("No matches found");
-        }
-        Ok(())
+        Ok(match_count)
     }
 }
 
@@ -136,9 +133,14 @@ fn main() {
         std::process::exit(1);
     });
     //read files from paths
-    config.read_file_from_paths().unwrap_or_else(|err| {
+    let matches = config.read_file_from_paths().unwrap_or_else(|err| {
         let path_or_paths = if paths.len() > 1 { "paths" } else { "path" };
         println!("Problem reading file from {}: {}", path_or_paths, err);
         std::process::exit(1);
     });
+    if matches == 0 {
+        println!("No matches found");
+    } else {
+        println!("Found {} matches", matches);
+    }
 }
