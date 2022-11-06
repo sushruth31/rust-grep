@@ -138,6 +138,7 @@ fn main() {
     if matches == 0 {
         println!("No matches found");
     } else {
-        println!("Found {} matches", matches);
+        let match_or_matches = if matches > 1 { "matches" } else { "match" };
+        println!("Found {} {}", matches, match_or_matches);
     }
 }
