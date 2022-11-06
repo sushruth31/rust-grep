@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 use std::error::Error;
-use std::fs;
 use std::fs::metadata;
+use std::fs::{self, File};
+use std::io::{BufReader, Read};
 
 struct Config {
     query: String,
@@ -99,14 +100,24 @@ impl Config {
         let mut empty_count = 0;
         for path in &self.paths {
             println!("Searching in file: {}...", path);
-            let contents = fs::read_to_string(path)?;
-            let matches = self.get_matches(&contents);
-            if !matches.is_empty() {
-                for (line, i) in matches {
-                    println!("File: {}, Line: {}, Content: {}", path, i, line);
+            match File::open(path) {
+                Ok(file) => {
+                    let mut reader = BufReader::new(file);
+                    let mut contents = String::new();
+                    if reader.read_to_string(&mut contents).is_ok() {
+                        let matches = self.get_matches(&contents);
+                        if matches.is_empty() {
+                            empty_count += 1;
+                        } else {
+                            for (line, i) in matches {
+                                println!("{}: {}", i + 1, line);
+                            }
+                        }
+                    }
                 }
-            } else {
-                empty_count += 1;
+                Err(e) => {
+                    println!("Error: {}", e);
+                }
             }
         }
         if empty_count == self.paths.len() {
